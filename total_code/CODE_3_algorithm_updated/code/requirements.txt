@@ -1,0 +1,5 @@
+astropy
+bleak
+numpy
+pynmea2
+pyserial
