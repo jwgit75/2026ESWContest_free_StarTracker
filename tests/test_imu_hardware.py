@@ -109,6 +109,21 @@ class MPU6050PairTests(unittest.TestCase):
         with self.assertRaises(IMUInitializationError):
             pair.initialize()
 
+    def test_initialize_accepts_mpu6500_identity(self):
+        bus = FakeSMBus(
+            {0x68: [], 0x69: []},
+            identities={0x68: 0x70, 0x69: 0x70},
+        )
+        pair = MPU6050Pair(
+            base_address=0x68,
+            upper_address=0x69,
+            bus_factory=lambda _bus_number: bus,
+            sleep=lambda _seconds: None,
+        )
+
+        pair.initialize()
+        self.assertTrue(pair.initialized)
+
     def test_filtered_pitch_returns_median_for_each_address(self):
         bus = FakeSMBus(
             {

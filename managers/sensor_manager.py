@@ -100,6 +100,11 @@ class QMC5883L:
             6,
         )
 
+        if not isinstance(data, (list, tuple)) or len(data) < 6:
+            raise RuntimeError(
+                f"Compass read returned incomplete data: {data!r}"
+            )
+
         x = _signed_int16(data[0], data[1])
         y = _signed_int16(data[2], data[3])
         z = _signed_int16(data[4], data[5])

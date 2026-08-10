@@ -30,6 +30,10 @@ class QMC5883L:
         if not (status & 0x01):
             raise RuntimeError("Compass data not ready.")
         data = self._bus.read_i2c_block_data(self.address, self.DATA_START, 6)
+        if not isinstance(data, (list, tuple)) or len(data) < 6:
+            raise RuntimeError(
+                f"Compass read returned incomplete data: {data!r}"
+            )
         x = signed_int16(data[0], data[1])
         y = signed_int16(data[2], data[3])
         z = signed_int16(data[4], data[5])

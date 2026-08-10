@@ -1,4 +1,4 @@
-"""MPU6050 pair access and pitch measurement utilities."""
+"""MPU-6xxx pair access and pitch measurement utilities."""
 
 from __future__ import annotations
 
@@ -50,13 +50,14 @@ def acceleration_to_pitch(x: int, y: int, z: int) -> float:
 
 
 class MPU6050Pair:
-    """Read a fixed base MPU6050 and a moving upper MPU6050."""
+    """Read a fixed base MPU-6xxx and a moving upper MPU-6xxx sensor."""
 
     WHO_AM_I = 0x75
     POWER_MANAGEMENT_1 = 0x6B
     ACCELEROMETER_CONFIG = 0x1C
     DIGITAL_LOW_PASS_CONFIG = 0x1A
     ACCELEROMETER_START = 0x3B
+    VALID_WHO_AM_I_IDENTITIES = {0x68, 0x70}
 
     def __init__(
         self,
@@ -104,9 +105,10 @@ class MPU6050Pair:
                     self._bus.read_byte_data(address, self.WHO_AM_I)
                 )
 
-                # MPU6050 reports 0x68. Some compatible parts expose AD0
-                # in bit 0, so mask that bit while validating the device ID.
-                if identity & 0x7E != 0x68:
+                # MPU-6xxx devices report either 0x68 or 0x70 in WHO_AM_I.
+                # Some compatible parts expose AD0 in bit 0, so mask that bit
+                # while validating the device ID.
+                if identity & 0x7E not in self.VALID_WHO_AM_I_IDENTITIES:
                     raise IMUInitializationError(
                         f"Unexpected WHO_AM_I 0x{identity:02X} "
                         f"at I2C address 0x{address:02X}."
