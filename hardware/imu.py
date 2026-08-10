@@ -104,9 +104,9 @@ class MPU6050Pair:
                     self._bus.read_byte_data(address, self.WHO_AM_I)
                 )
 
-                # MPU6050 reports 0x68. Some compatible parts expose AD0
-                # in bit 0, so mask that bit while validating the device ID.
-                if identity & 0x7E != 0x68:
+                # MPU6050 reports 0x68, MPU6500/MPU9255 reports 0x70.
+                # Mask bit 0 (AD0) while validating the device ID.
+                if identity & 0x7E not in (0x68, 0x70):
                     raise IMUInitializationError(
                         f"Unexpected WHO_AM_I 0x{identity:02X} "
                         f"at I2C address 0x{address:02X}."

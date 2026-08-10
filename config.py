@@ -251,3 +251,19 @@ GNSS_READ_TIMEOUT = 1.0
 
 # 유효한 위치 Fix 최대 대기 시간
 GNSS_FIX_TIMEOUT = 60.0
+
+
+# ==================================================
+# Compass & Stepper Motor Configuration
+# ==================================================
+COMPASS_I2C_BUS = 1
+COMPASS_I2C_ADDR = 0x0D
+MAGNETIC_DECLINATION = 8.0  # 한국 자기편각 (도)
+
+COMPASS_STEP_PIN = 23  # STEP 신호 핀
+COMPASS_DIR_PIN = 24  # DIR 신호 핀
+COMPASS_EN_PIN = 25  # ENABLE 핀
+
+MOTOR_STEPS_PER_REV = 400
+MICROSTEP = 16
+GEAR_RATIO = 54
