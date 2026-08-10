@@ -139,6 +139,15 @@ IMU_STABLE_READS_REQUIRED = 3
 IMU_DIRECTION_PROBE_STEPS = 240
 IMU_MIN_PROBE_RESPONSE_DEG = 0.08
 
+# =========================================================
+# Compass / Magnetometer
+# =========================================================
+
+COMPASS_ENABLED = False
+COMPASS_I2C_BUS = 1
+COMPASS_ADDRESS = 0x0D
+COMPASS_UPDATE_INTERVAL_SECONDS = 0.5
+
 IMU_PROPORTIONAL_GAIN = 0.65
 IMU_MIN_CORRECTION_STEPS = 8
 IMU_MAX_CORRECTION_STEPS = 960
@@ -251,3 +260,12 @@ GNSS_READ_TIMEOUT = 1.0
 
 # 유효한 위치 Fix 최대 대기 시간
 GNSS_FIX_TIMEOUT = 60.0
+
+
+# =========================================================
+# Compass / Magnetometer
+# =========================================================
+COMPASS_ENABLED = False
+COMPASS_I2C_BUS = 1
+COMPASS_ADDRESS = 0x0D   # QMC5883L 기본 주소
+COMPASS_UPDATE_INTERVAL_SECONDS = 0.5

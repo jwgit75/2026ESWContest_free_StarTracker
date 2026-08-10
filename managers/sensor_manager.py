@@ -17,6 +17,7 @@ StarTracker Sensor Manager
 - QMC5883L Compass
 """
 
+import math
 import threading
 import time as time_module
 from datetime import datetime, timedelta, timezone
@@ -26,6 +27,102 @@ import pynmea2
 import serial
 
 import config
+
+
+def _signed_int16(low: int, high: int) -> int:
+    """Decode a little-endian two's-complement 16-bit integer."""
+    value = ((int(high) & 0xFF) << 8) | (int(low) & 0xFF)
+    return value - 0x10000 if value & 0x8000 else value
+
+
+class QMC5883L:
+    """Minimal QMC5883L compass driver for heading measurement."""
+
+    STATUS_REG = 0x06
+    DATA_REGISTER = 0x00
+    CONTROL_REG = 0x09
+
+    def __init__(
+        self,
+        bus_number: int = 1,
+        address: int = 0x0D,
+        bus_factory=None,
+        sleep: callable = time_module.sleep,
+    ) -> None:
+        self.bus_number = int(bus_number)
+        self.address = int(address)
+        self._bus_factory = bus_factory
+        self._sleep = sleep
+        self._bus = None
+        self.initialized = False
+
+    def initialize(self) -> None:
+        """Open I2C and configure the compass for continuous measurement."""
+
+        if self.initialized:
+            return
+
+        if self._bus_factory is None:
+            try:
+                from smbus2 import SMBus
+            except ImportError as error:
+                raise RuntimeError(
+                    "smbus2 is required for QMC5883L compass access."
+                ) from error
+
+            self._bus_factory = SMBus
+
+        self._bus = self._bus_factory(self.bus_number)
+
+        # Continuous measurement mode, 2 gauss range, 200 Hz output rate.
+        self._bus.write_byte_data(
+            self.address,
+            self.CONTROL_REG,
+            0x1D,
+        )
+
+        self._sleep(0.01)
+        self.initialized = True
+
+    def read_heading(self) -> float:
+        """Read the current heading in degrees from the compass."""
+
+        if not self.initialized or self._bus is None:
+            raise RuntimeError("QMC5883L is not initialized.")
+
+        status = self._bus.read_byte_data(self.address, self.STATUS_REG)
+        if not (status & 0x01):
+            raise RuntimeError("Compass data not ready.")
+
+        data = self._bus.read_i2c_block_data(
+            self.address,
+            self.DATA_REGISTER,
+            6,
+        )
+
+        x = _signed_int16(data[0], data[1])
+        y = _signed_int16(data[2], data[3])
+        z = _signed_int16(data[4], data[5])
+
+        heading = math.degrees(math.atan2(y, x))
+        if heading < 0.0:
+            heading += 360.0
+
+        return heading
+
+    def close(self) -> None:
+        """Close the I2C bus if it was opened."""
+
+        if self._bus is None:
+            return
+
+        try:
+            self._bus.close()
+        except Exception:
+            pass
+
+        self._bus = None
+        self.initialized = False
 
 
 class SensorManager:
@@ -61,6 +158,9 @@ class SensorManager:
         # ==================================================
 
         self.serial_port: Optional[serial.Serial] = None
+
+        self._compass: Optional[QMC5883L] = None
+        self._compass_thread: Optional[threading.Thread] = None
 
         self.running = False
 
@@ -111,8 +211,22 @@ class SensorManager:
         with self._data_lock:
             self.utc = None
             self._utc_reference_monotonic = None
+            self.heading = None
 
         self.running = True
+
+        if config.COMPASS_ENABLED:
+            try:
+                self._compass = QMC5883L(
+                    bus_number=config.COMPASS_I2C_BUS,
+                    address=config.COMPASS_ADDRESS,
+                )
+                self._compass.initialize()
+            except Exception as error:
+                print(
+                    f"[Sensor] Compass initialization failed: {error}"
+                )
+                self._compass = None
 
         self._reader_thread = threading.Thread(
             target=self._gnss_reader_loop,
@@ -122,11 +236,25 @@ class SensorManager:
 
         self._reader_thread.start()
 
+        if (
+            config.COMPASS_ENABLED
+            and self._compass is not None
+        ):
+            self._compass_thread = threading.Thread(
+                target=self._compass_reader_loop,
+                name="CompassReader",
+                daemon=True,
+            )
+            self._compass_thread.start()
+
         print(
             f"[Sensor] GNSS Started: "
             f"{config.GNSS_PORT} @ "
             f"{config.GNSS_BAUDRATE} baud"
         )
+
+        if self._compass is not None:
+            print("[Sensor] Compass Started")
 
         return True
 
@@ -186,6 +314,35 @@ class SensorManager:
         self.running = False
 
         print("[Sensor] GNSS Reader Ended")
+
+    # ==================================================
+    # Compass Reader
+
+    def _compass_reader_loop(self) -> None:
+        """주기적으로 QMC5883L에서 heading 값을 읽는다."""
+
+        while (
+            self.running
+            and not self._stop_event.is_set()
+            and self._compass is not None
+        ):
+
+            try:
+                heading = self._compass.read_heading()
+
+                with self._data_lock:
+                    self.heading = heading
+
+            except Exception as error:
+                print(
+                    f"[Sensor] Compass Read Warning: {error}"
+                )
+
+            time_module.sleep(
+                config.COMPASS_UPDATE_INTERVAL_SECONDS
+            )
+
+        print("[Sensor] Compass Reader Ended")
 
     # ==================================================
     # Process NMEA
@@ -540,6 +697,15 @@ class SensorManager:
 
             self._reader_thread.join(timeout=2.0)
 
+        if (
+            self._compass_thread is not None
+            and self._compass_thread.is_alive()
+            and self._compass_thread
+            is not threading.current_thread()
+        ):
+
+            self._compass_thread.join(timeout=2.0)
+
         if self.serial_port is not None:
 
             try:
@@ -549,6 +715,16 @@ class SensorManager:
                 pass
 
             self.serial_port = None
+
+        if self._compass is not None:
+
+            try:
+                self._compass.close()
+
+            except Exception:
+                pass
+
+            self._compass = None
 
         print("[Sensor] Stopped")
 

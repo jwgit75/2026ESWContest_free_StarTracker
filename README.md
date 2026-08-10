@@ -15,6 +15,7 @@ MPU6050을 사용하는 최종 제어 코드입니다. 전원을 켜면 고정 �
 - GY-NEO6MV2 GNSS
 - ESP32-C3 BLE 조이스틱
 - MPU6050 2개
+- Optional: QMC5883L Compass 지원 (config.py에서 `COMPASS_ENABLED=False`로 기본 설정)
 
 ### MPU6050 배선
 
@@ -42,6 +43,9 @@ sudo apt install -y \
 
 python3 -m pip install -r requirements.txt
 ```
+
+옵션으로 QMC5883L Compass를 사용할 경우 `config.py`에서
+`COMPASS_ENABLED = True`로 설정하고 I²C 배선을 확인하십시오.
 
 두 IMU 주소를 먼저 확인합니다.
 
@@ -127,6 +131,18 @@ pitch 차이를 측정해 다음 값으로 보정합니다.
 IMU_BASE_PITCH_OFFSET_DEG = 0.0
 IMU_UPPER_PITCH_OFFSET_DEG = 0.0
 ```
+
+## Optional Compass Support
+
+`config.py`의 다음 설정으로 QMC5883L Compass를 활성화하면
+`SensorManager`가 주기적으로 heading을 읽습니다.
+
+- `COMPASS_ENABLED = False`
+- `COMPASS_I2C_BUS = 1`
+- `COMPASS_ADDRESS = 0x0D`
+- `COMPASS_UPDATE_INTERVAL_SECONDS = 0.5`
+
+현재 기본값은 `False`이며, Compass는 추적 알고리즘의 필수 요소가 아닙니다.
 
 계산식은 `측정 pitch - 해당 센서 offset`입니다. 두 센서 축 방향이 반대로
 장착된 문제는 offset으로 해결할 수 없으므로 장착 방향부터 맞춰야 합니다.
