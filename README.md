@@ -180,4 +180,4 @@ FINAL_FRAME_COUNT = 18
 
 실기 시험은 [HARDWARE_ACCEPTANCE_CHECKLIST.md](HARDWARE_ACCEPTANCE_CHECKLIST.md)의
 순서를 따르십시오.
---------------------------------------------------------------------------------
+test
