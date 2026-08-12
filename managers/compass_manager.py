@@ -56,7 +56,7 @@ class CompassManager:
             print(f"[Compass] Initialization failed: {e}")
             return False
 
-    def disable_motor((self) -> None:
+    def disable_motor(self) -> None:
         """모터 발열 방지를 위한 Disable 처리"""
         try:
             GPIO.output(self.en_pin, GPIO.HIGH)

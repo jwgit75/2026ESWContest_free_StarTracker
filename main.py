@@ -48,7 +48,7 @@ async def run_star_tracker() -> None:
         print("[Main] Hardware initialization & Compass calibration...")
 
         if compass.initialize():
-            cal_success = await compass.calibrate_async(sample_divisions=36)
+            cal_success = await compass.calibrate_async(sample_divisions=25)
             if not cal_success:
                 print(
                     "[Main] Compass calibration failed. Proceeding with caution."
