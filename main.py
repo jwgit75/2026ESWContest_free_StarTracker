@@ -5,11 +5,13 @@ StarTracker Main Program (Compass Integrated)
 """
 
 import asyncio
+import time
 
 import config
 
 from communication.ble_manager import BLEManager
 from managers.compass_manager import CompassManager
+from managers.lcd_manager import install_print_hook, lcd_manager, restore_print_hook
 from managers.sensor_manager import SensorManager
 from managers.tracking_manager import TrackingManager
 
@@ -20,6 +22,8 @@ async def run_star_tracker() -> None:
     tracking = TrackingManager()
     ble = BLEManager(tracking)
     compass = CompassManager()
+
+    install_print_hook()
 
     try:
 
@@ -184,6 +188,20 @@ async def run_star_tracker() -> None:
             print(f"[Main] Sensor Shutdown Warning: {error}")
 
         print("[Main] System shutdown complete.")
+        # Prevent further prints from being enqueued to the LCD while we display shutdown text
+        try:
+            restore_print_hook()
+        except Exception:
+            pass
+        try:
+            lcd_manager.clear()
+            lcd_manager.write_text("Star Tracker System shutdown...", end="\n")
+            time.sleep(5.0)
+        except Exception:
+            pass
+        lcd_manager.clear()
+        lcd_manager.set_backlight(False)
+        lcd_manager.close()
 
 
 def main() -> None:
@@ -193,6 +211,19 @@ def main() -> None:
     except KeyboardInterrupt:
         print()
         print("[Main] Program terminated by user.")
+        try:
+            restore_print_hook()
+        except Exception:
+            pass
+        try:
+            lcd_manager.clear()
+            lcd_manager.write_text("Star Tracker System shutdown...", end="\n")
+            time.sleep(5.0)
+        except Exception:
+            pass
+        lcd_manager.clear()
+        lcd_manager.set_backlight(False)
+        lcd_manager.close()
 
 
 if __name__ == "__main__":
