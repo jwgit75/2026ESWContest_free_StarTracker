@@ -5,6 +5,7 @@ StarTracker Main Program (Compass Integrated)
 """
 
 import asyncio
+import threading
 import time
 
 import config
@@ -14,6 +15,7 @@ from managers.compass_manager import CompassManager
 from managers.lcd_manager import install_print_hook, lcd_manager, restore_print_hook
 from managers.sensor_manager import SensorManager
 from managers.tracking_manager import TrackingManager
+from services.web_server import create_streaming_app
 
 
 async def run_star_tracker() -> None:
@@ -121,7 +123,43 @@ async def run_star_tracker() -> None:
             return
 
         # ==================================================
-        # 6. System Ready
+        # 6. Start Streaming
+        # ==================================================
+
+        print("[Main] Starting camera streaming...")
+
+        camera = tracking.camera
+        camera.start_streaming()
+
+        print(
+            f"[Main] Web stream available at http://"
+            f"{config.STREAMING_SERVER_HOST}:"
+            f"{config.STREAMING_SERVER_PORT}/"
+        )
+
+        # Flask 서버를 별도 스레드에서 실행
+        flask_app = create_streaming_app(camera)
+
+        def run_flask():
+            flask_app.run(
+                host=config.STREAMING_SERVER_HOST,
+                port=config.STREAMING_SERVER_PORT,
+                debug=False,
+                use_reloader=False,
+                threaded=True,
+            )
+
+        flask_thread = threading.Thread(
+            target=run_flask,
+            name="FlaskStreamingServer",
+            daemon=True,
+        )
+        flask_thread.start()
+
+        print("[Main] Streaming server started in background")
+
+        # ==================================================
+        # 7. System Ready
         # ==================================================
 
         print()
@@ -132,15 +170,20 @@ async def run_star_tracker() -> None:
         print("[Control]")
         print("Joystick X : AZ movement")
         print("Joystick Y : ALT movement")
-        print("Joystick Click : Tracking Start / Stop")
+        print("Joystick Click : Manual Control Finished → Long Exposure Start")
         print("Ctrl+C : Program Exit")
         print()
 
         # ==================================================
-        # 7. Main Loop
+        # 8. Main Loop
         # ==================================================
 
         while True:
+
+            # 사용자가 조이스틱을 클릭하면 ble._stop_event가 설정된다
+            if ble._stop_event.is_set():
+                print("[Main] Joystick click detected → Manual control finished")
+                break
 
             if not ble.running:
                 print(
@@ -155,6 +198,21 @@ async def run_star_tracker() -> None:
 
             await asyncio.sleep(0.5)
 
+        # ==================================================
+        # 9. Stop Streaming + Long Exposure
+        # ==================================================
+
+        print("[Main] Stopping streaming...")
+        camera.stop_streaming()
+
+        print("[Main] Waiting for camera stabilization...")
+        time.sleep(0.5)
+
+        print("[Main] Starting long exposure capture...")
+        camera.capture_long_exposure()
+
+        print("[Main] Long exposure complete")
+
     except asyncio.CancelledError:
         print("[Main] Program cancellation requested.")
         raise
@@ -166,6 +224,11 @@ async def run_star_tracker() -> None:
 
         print()
         print("[Main] System shutdown started...")
+
+        try:
+            camera.stop_streaming()
+        except Exception as error:
+            print(f"[Main] Camera Streaming Shutdown Warning: {error}")
 
         try:
             await ble.disconnect()
