@@ -132,8 +132,7 @@ class CompassManager:
 
                 print(
                     f"[Compass] Calibrating {i+1:2d}/{sample_divisions} | "
-                    f"X:[{x_min}, {x_max}] Y:[{y_min}, {y_max}]",
-                    end="\r",
+                    f"X:[{x_min}, {x_max}] Y:[{y_min}, {y_max}]"
                 )
 
         print("\n[Compass] Calibration Scan Complete.")
