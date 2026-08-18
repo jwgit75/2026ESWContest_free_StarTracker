@@ -204,6 +204,19 @@ PLATE_ANALOGUE_GAIN = 4.0
 
 
 # =========================================================
+# Streaming (BLE + Web Camera Feed)
+# =========================================================
+
+# Flask 웹 서버 설정
+STREAMING_SERVER_HOST = "192.168.0.104"
+STREAMING_SERVER_PORT = 8000
+
+# 스트리밍 카메라 해상도 (preview용, 낮을수록 빠름)
+STREAMING_RESOLUTION = (1280, 720)
+STREAMING_JPEG_QUALITY = 80
+
+
+# =========================================================
 # Final Image Capture
 # =========================================================
 
