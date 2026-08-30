@@ -55,12 +55,12 @@ STEPS_PER_DEGREE = 1.0 / STEP_ANGLE
 # =========================================================
 
 # AZ 축
-MOTOR_BASE_STEP_PIN = 22
-MOTOR_BASE_DIR_PIN = 27
+MOTOR_BASE_STEP_PIN = 10 #22
+MOTOR_BASE_DIR_PIN = 9 #27
 
 # EL 축을 프로젝트에서는 ALT 축으로 사용
-MOTOR_MOUNT_STEP_PIN = 10
-MOTOR_MOUNT_DIR_PIN = 9
+MOTOR_MOUNT_STEP_PIN = 22#10
+MOTOR_MOUNT_DIR_PIN = 27 #9
 
 # 논리적으로 각도가 증가할 때 드라이버 DIR 핀에 출력할 값.
 # ALT 값은 IMU probe가 성공하면 런타임에 자동 갱신된다.
